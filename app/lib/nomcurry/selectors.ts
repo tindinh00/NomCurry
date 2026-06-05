@@ -3,6 +3,7 @@ import type { AppRoute, AppState, SheetRow } from "@/app/types/nomcurry";
 
 export function normalizeRoute(route: AppRoute, state: AppState): AppRoute {
   if (!state.employee) return "auth";
+  if (route === "auth") return state.isManager ? "dashboard" : "shifts";
   if (!state.isManager && ["dashboard", "payroll", "approve"].includes(route)) return "shifts";
   if (state.isManager && ["attendance", "shifts", "auth"].includes(route)) return "dashboard";
   return route;

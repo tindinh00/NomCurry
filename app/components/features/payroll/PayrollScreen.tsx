@@ -37,6 +37,7 @@ function formatMonthLabel(monthKey: string) {
 export function PayrollScreen({ state, mutate }: PayrollScreenProps) {
   const payrollRate = usePayrollRate(state);
   const [monthFilter, setMonthFilter] = useState<string>(currentMonthKey());
+  const selectedEmp = state.payrollSummary.find((r) => r.employeeId === payrollRate.employeeId);
 
   const availableMonths = useMemo(() => {
     const months = new Set(
@@ -111,13 +112,15 @@ export function PayrollScreen({ state, mutate }: PayrollScreenProps) {
                   <FieldLabel>Nhân viên</FieldLabel>
                   <Select value={payrollRate.employeeId} onValueChange={(value) => value && payrollRate.setEmployeeId(value)}>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Chọn nhân viên" />
+                      <SelectValue placeholder="Chọn nhân viên">
+                        {selectedEmp ? selectedEmp.employeeName : "Chọn nhân viên"}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectGroup>
                         {state.payrollSummary.map((row) => (
                           <SelectItem key={row.employeeId} value={row.employeeId}>
-                            {row.employeeName}
+                            {row.employeeName} ({row.employeeId})
                           </SelectItem>
                         ))}
                       </SelectGroup>

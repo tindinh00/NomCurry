@@ -1,17 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CheckCheckIcon, CheckIcon, Loader2Icon, Trash2Icon, XIcon } from "lucide-react";
+import { CheckCheckIcon, CheckIcon, ChevronLeftIcon, ChevronRightIcon, Loader2Icon, Trash2Icon, UsersRoundIcon, XIcon } from "lucide-react";
 
 import { Pagination } from "@/app/components/common/Actions";
 import { StatusBadge } from "@/app/components/common/StatusBadge";
 import { PAGE_SIZE, REGISTRATION_STATUS } from "@/app/lib/nomcurry/constants";
-import { getDayLabel, getWeekLabel, normalizeDateKey } from "@/app/lib/nomcurry/date";
+import { getDayLabel, getWeekLabel, getWeekMonday, normalizeDateKey, shiftWeek, todayKey } from "@/app/lib/nomcurry/date";
 import { findEmployee, findShift, groupRegistrationsByWeek, registrationHaystack, sortRegistrationsNewest } from "@/app/lib/nomcurry/selectors";
 import type { AppState, MutateAppState, SheetRow } from "@/app/types/nomcurry";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
@@ -34,20 +36,29 @@ export type RegistrationPanelProps = {
 export function RegistrationPanel({ title, description, state, rows, mutate, allowWeekApprove = false }: RegistrationPanelProps) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("tất cả");
+  const [weekMode, setWeekMode] = useState<"week" | "all">("week");
+  const [weekKey, setWeekKey] = useState(getWeekMonday(todayKey()));
   const [page, setPage] = useState(1);
   const [loadingWeekKey, setLoadingWeekKey] = useState<string | null>(null);
+  const [resolvingRow, setResolvingRow] = useState<SheetRow | null>(null);
+  const [loadingResolveId, setLoadingResolveId] = useState("");
 
   const filtered = useMemo(() => rows
     .filter((row) => status === "tất cả" || row["Tình Trạng"] === status)
+    .filter((row) => weekMode === "all" || getWeekMonday(row["Ngày"]) === weekKey)
     .filter((row) => !query || registrationHaystack(state, row).includes(query.toLowerCase()))
-    .sort(sortRegistrationsNewest), [query, rows, state, status]);
+    .sort(sortRegistrationsNewest), [query, rows, state, status, weekKey, weekMode]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const visible = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   // Grouping is used for the approve screen (allowWeekApprove) to show "Duyệt cả tuần"
   const groups = allowWeekApprove ? groupRegistrationsByWeek(visible) : null;
+  const resolvingRows = useMemo(
+    () => resolvingRow ? findPendingRowsForSlot(rows, resolvingRow) : [],
+    [resolvingRow, rows]
+  );
 
-  useEffect(() => setPage(1), [query, status]);
+  useEffect(() => setPage(1), [query, status, weekKey, weekMode]);
 
   return (
     <Card>
@@ -78,6 +89,49 @@ export function RegistrationPanel({ title, description, state, rows, mutate, all
           </Select>
         </div>
 
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm font-medium">
+            {weekMode === "all" ? "Tất cả tuần" : getWeekLabel(weekKey)}
+          </p>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Button
+              variant="outline"
+              size="icon-sm"
+              disabled={weekMode === "all"}
+              onClick={() => setWeekKey((current) => shiftWeek(current, -1))}
+              aria-label="Tuần trước"
+            >
+              <ChevronLeftIcon />
+            </Button>
+            <Button
+              variant={weekMode === "week" && weekKey === getWeekMonday(todayKey()) ? "default" : "outline"}
+              size="sm"
+              onClick={() => {
+                setWeekMode("week");
+                setWeekKey(getWeekMonday(todayKey()));
+              }}
+            >
+              Tuần này
+            </Button>
+            <Button
+              variant="outline"
+              size="icon-sm"
+              disabled={weekMode === "all"}
+              onClick={() => setWeekKey((current) => shiftWeek(current, 1))}
+              aria-label="Tuần sau"
+            >
+              <ChevronRightIcon />
+            </Button>
+            <Button
+              variant={weekMode === "all" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setWeekMode("all")}
+            >
+              Tất cả
+            </Button>
+          </div>
+        </div>
+
         {visible.length ? (
           <>
             {/* ── Mobile: card layout (actions always accessible) ── */}
@@ -95,7 +149,7 @@ export function RegistrationPanel({ title, description, state, rows, mutate, all
                             disabled={loadingWeekKey !== null}
                             onClick={() => {
                               setLoadingWeekKey(group.weekKey);
-                              mutate("/api/registrations/week-approve", { monday: group.weekKey }, "Đã duyệt cả tuần")
+                              mutate("/api/registrations/week-approve", { monday: group.weekKey }, "Đã duyệt các ca không trùng")
                                 .finally(() => setLoadingWeekKey(null));
                             }}
                           >
@@ -109,12 +163,26 @@ export function RegistrationPanel({ title, description, state, rows, mutate, all
                         ) : null}
                       </div>
                       {group.rows.map((row) => (
-                        <RegistrationMobileCard key={row["Mã Đăng Ký"]} state={state} row={row} mutate={mutate} />
+                        <RegistrationMobileCard
+                          key={row["Mã Đăng Ký"]}
+                          state={state}
+                          row={row}
+                          rows={rows}
+                          mutate={mutate}
+                          onResolveSlot={setResolvingRow}
+                        />
                       ))}
                     </div>
                   ))
                 : visible.map((row) => (
-                    <RegistrationMobileCard key={row["Mã Đăng Ký"]} state={state} row={row} mutate={mutate} />
+                    <RegistrationMobileCard
+                      key={row["Mã Đăng Ký"]}
+                      state={state}
+                      row={row}
+                      rows={rows}
+                      mutate={mutate}
+                      onResolveSlot={setResolvingRow}
+                    />
                   ))}
             </div>
 
@@ -136,7 +204,7 @@ export function RegistrationPanel({ title, description, state, rows, mutate, all
                             disabled={loadingWeekKey !== null}
                             onClick={() => {
                               setLoadingWeekKey(group.weekKey);
-                              mutate("/api/registrations/week-approve", { monday: group.weekKey }, "Đã duyệt cả tuần")
+                              mutate("/api/registrations/week-approve", { monday: group.weekKey }, "Đã duyệt các ca không trùng")
                                 .finally(() => setLoadingWeekKey(null));
                             }}
                           >
@@ -163,7 +231,14 @@ export function RegistrationPanel({ title, description, state, rows, mutate, all
                         </TableHeader>
                         <TableBody>
                           {group.rows.map((row) => (
-                            <RegistrationTableRow key={row["Mã Đăng Ký"]} state={state} row={row} mutate={mutate} />
+                            <RegistrationTableRow
+                              key={row["Mã Đăng Ký"]}
+                              state={state}
+                              row={row}
+                              rows={rows}
+                              mutate={mutate}
+                              onResolveSlot={setResolvingRow}
+                            />
                           ))}
                         </TableBody>
                       </Table>
@@ -185,7 +260,14 @@ export function RegistrationPanel({ title, description, state, rows, mutate, all
                       </TableHeader>
                       <TableBody>
                         {visible.map((row) => (
-                          <RegistrationTableRow key={row["Mã Đăng Ký"]} state={state} row={row} mutate={mutate} />
+                          <RegistrationTableRow
+                            key={row["Mã Đăng Ký"]}
+                            state={state}
+                            row={row}
+                            rows={rows}
+                            mutate={mutate}
+                            onResolveSlot={setResolvingRow}
+                          />
                         ))}
                       </TableBody>
                     </Table>
@@ -201,74 +283,176 @@ export function RegistrationPanel({ title, description, state, rows, mutate, all
         )}
 
         {totalPages > 1 ? <Pagination page={page} totalPages={totalPages} setPage={setPage} /> : null}
+
+        <Dialog open={Boolean(resolvingRow)} onOpenChange={(open) => !open && !loadingResolveId && setResolvingRow(null)}>
+          <DialogContent className="sm:max-w-md" showCloseButton={!loadingResolveId}>
+            <DialogHeader>
+              <DialogTitle>Chọn nhân viên cho ca trùng</DialogTitle>
+              <DialogDescription>
+                {resolvingRow
+                  ? `${normalizeDateKey(resolvingRow["Ngày"])} · ${findShift(state, resolvingRow["Ca Làm"])?.["Tên Ca"] || resolvingRow["Ca Làm"]}`
+                  : "Chọn một nhân viên để chốt ca."}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-2">
+              {resolvingRows.map((row) => {
+                const employee = findEmployee(state, row["Nhân Viên"]);
+                const registrationId = row["Mã Đăng Ký"];
+                const loading = loadingResolveId === registrationId;
+
+                return (
+                  <div key={registrationId} className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[1fr_auto] sm:items-center">
+                    <div className="min-w-0">
+                      <p className="font-medium">{employee?.["Tên NV"] || row["Nhân Viên"]}</p>
+                      <p className="truncate text-sm text-muted-foreground">{employee?.["Email"] || row["Nhân Viên"]}</p>
+                      {row["Ghi chú"] ? <p className="mt-1 text-sm text-muted-foreground">Ghi chú: {row["Ghi chú"]}</p> : null}
+                    </div>
+                    <Button
+                      className="gap-1.5"
+                      disabled={Boolean(loadingResolveId)}
+                      onClick={() => {
+                        setLoadingResolveId(registrationId);
+                        mutate("/api/registrations/resolve-slot", { registrationId }, "Đã chọn nhân viên cho ca")
+                          .then(() => setResolvingRow(null))
+                          .finally(() => setLoadingResolveId(""));
+                      }}
+                    >
+                      {loading ? <Loader2Icon className="size-4 animate-spin" /> : <CheckIcon className="size-4" />}
+                      <span>Chọn</span>
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
 }
 
-function RegistrationTableRow({ state, row, mutate }: { state: AppState; row: SheetRow; mutate: MutateAppState }) {
+function RegistrationTableRow({
+  state,
+  row,
+  rows,
+  mutate,
+  onResolveSlot,
+}: {
+  state: AppState;
+  row: SheetRow;
+  rows: SheetRow[];
+  mutate: MutateAppState;
+  onResolveSlot: (row: SheetRow) => void;
+}) {
   return (
     <TableRow>
       <TableCell>{getDayLabel(row["Ngày"])}</TableCell>
       <TableCell>{normalizeDateKey(row["Ngày"])}</TableCell>
-      <TableCell>{findShift(state, row["Ca Làm"])?.["Tên Ca"] || row["Ca Làm"]}</TableCell>
+      <TableCell>
+        <div className="flex flex-wrap items-center gap-2">
+          <span>{findShift(state, row["Ca Làm"])?.["Tên Ca"] || row["Ca Làm"]}</span>
+          <SlotConflictBadge rows={rows} row={row} />
+        </div>
+      </TableCell>
       <TableCell>{findEmployee(state, row["Nhân Viên"])?.["Tên NV"] || row["Nhân Viên"]}</TableCell>
       <TableCell><StatusBadge status={row["Tình Trạng"]} /></TableCell>
       <TableCell className="max-w-48 truncate">{row["Ghi chú"] || "–"}</TableCell>
-      <TableCell><RegistrationActions state={state} row={row} mutate={mutate} /></TableCell>
+      <TableCell><RegistrationActions state={state} row={row} rows={rows} mutate={mutate} onResolveSlot={onResolveSlot} /></TableCell>
     </TableRow>
   );
 }
 
-function RegistrationMobileCard({ state, row, mutate }: { state: AppState; row: SheetRow; mutate: MutateAppState }) {
+function RegistrationMobileCard({
+  state,
+  row,
+  rows,
+  mutate,
+  onResolveSlot,
+}: {
+  state: AppState;
+  row: SheetRow;
+  rows: SheetRow[];
+  mutate: MutateAppState;
+  onResolveSlot: (row: SheetRow) => void;
+}) {
   return (
     <Card size="sm">
       <CardHeader>
-        <CardTitle className="text-sm">{normalizeDateKey(row["Ngày"])} · {findShift(state, row["Ca Làm"])?.["Tên Ca"] || row["Ca Làm"]}</CardTitle>
+        <CardTitle className="flex flex-wrap items-center gap-2 text-sm">
+          <span>{normalizeDateKey(row["Ngày"])} · {findShift(state, row["Ca Làm"])?.["Tên Ca"] || row["Ca Làm"]}</span>
+          <SlotConflictBadge rows={rows} row={row} />
+        </CardTitle>
         <CardDescription>{findEmployee(state, row["Nhân Viên"])?.["Tên NV"] || row["Nhân Viên"]}</CardDescription>
         <CardAction><StatusBadge status={row["Tình Trạng"]} /></CardAction>
       </CardHeader>
       {(row["Ghi chú"] || state.isManager) ? (
         <CardContent className="grid gap-3 pt-0">
           {row["Ghi chú"] ? <p className="text-sm text-muted-foreground">{row["Ghi chú"]}</p> : null}
-          <RegistrationActions state={state} row={row} mutate={mutate} />
+          <RegistrationActions state={state} row={row} rows={rows} mutate={mutate} onResolveSlot={onResolveSlot} />
         </CardContent>
       ) : null}
     </Card>
   );
 }
 
-function RegistrationActions({ state, row, mutate }: { state: AppState; row: SheetRow; mutate: MutateAppState }) {
+function RegistrationActions({
+  state,
+  row,
+  rows,
+  mutate,
+  onResolveSlot,
+}: {
+  state: AppState;
+  row: SheetRow;
+  rows: SheetRow[];
+  mutate: MutateAppState;
+  onResolveSlot: (row: SheetRow) => void;
+}) {
   const [loadingAction, setLoadingAction] = useState<"approve" | "reject" | "delete" | null>(null);
 
   if (!state.isManager) return null;
 
   const registrationId = row["Mã Đăng Ký"];
   const pending = row["Tình Trạng"] === REGISTRATION_STATUS.pending;
+  const conflictRows = pending ? findPendingRowsForSlot(rows, row) : [];
+  const hasConflict = conflictRows.length > 1;
   const isBusy = loadingAction !== null;
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex flex-wrap items-center gap-1.5">
       {pending ? (
         <>
-          <Button
-            className="flex-1 gap-1.5 cursor-pointer"
-            variant="default"
-            size="sm"
-            disabled={isBusy}
-            onClick={() => {
-              setLoadingAction("approve");
-              mutate("/api/registrations/status", { registrationId, status: REGISTRATION_STATUS.approved }, "Đã duyệt ca")
-                .finally(() => setLoadingAction(null));
-            }}
-          >
-            {loadingAction === "approve" ? (
-              <Loader2Icon className="size-4 animate-spin" />
-            ) : (
-              <CheckIcon className="size-4" />
-            )}
-            <span>Duyệt</span>
-          </Button>
+          {hasConflict ? (
+            <Button
+              className="flex-1 gap-1.5 cursor-pointer"
+              variant="default"
+              size="sm"
+              disabled={isBusy}
+              onClick={() => onResolveSlot(row)}
+            >
+              <UsersRoundIcon className="size-4" />
+              <span>Chọn</span>
+            </Button>
+          ) : (
+            <Button
+              className="flex-1 gap-1.5 cursor-pointer"
+              variant="default"
+              size="sm"
+              disabled={isBusy}
+              onClick={() => {
+                setLoadingAction("approve");
+                mutate("/api/registrations/status", { registrationId, status: REGISTRATION_STATUS.approved }, "Đã duyệt ca")
+                  .finally(() => setLoadingAction(null));
+              }}
+            >
+              {loadingAction === "approve" ? (
+                <Loader2Icon className="size-4 animate-spin" />
+              ) : (
+                <CheckIcon className="size-4" />
+              )}
+              <span>Duyệt</span>
+            </Button>
+          )}
           <Button
             className="flex-1 gap-1.5 cursor-pointer"
             variant="outline"
@@ -308,5 +492,32 @@ function RegistrationActions({ state, row, mutate }: { state: AppState; row: She
         <span>Xóa</span>
       </Button>
     </div>
+  );
+}
+
+function SlotConflictBadge({ rows, row }: { rows: SheetRow[]; row: SheetRow }) {
+  const conflictCount = row["Tình Trạng"] === REGISTRATION_STATUS.pending
+    ? findPendingRowsForSlot(rows, row).length
+    : 0;
+
+  if (conflictCount < 2) return null;
+
+  return (
+    <Badge variant="destructive" className="gap-1">
+      <UsersRoundIcon className="size-3" />
+      {conflictCount} người
+    </Badge>
+  );
+}
+
+function registrationSlotKey(row: SheetRow) {
+  return `${normalizeDateKey(row["Ngày"])}|${String(row["Ca Làm"] ?? "").trim()}`;
+}
+
+function findPendingRowsForSlot(rows: SheetRow[], row: SheetRow) {
+  const key = registrationSlotKey(row);
+  return rows.filter((candidate) =>
+    candidate["Tình Trạng"] === REGISTRATION_STATUS.pending &&
+    registrationSlotKey(candidate) === key
   );
 }

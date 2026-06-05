@@ -4,7 +4,6 @@ import { ReloadButton } from "@/app/components/common/Actions";
 import { MetricCard } from "@/app/components/common/MetricCard";
 import { RegistrationPanel } from "@/app/components/common/RegistrationPanel";
 import { ScreenHeader } from "@/app/components/common/ScreenHeader";
-import { normalizeDateKey } from "@/app/lib/nomcurry/date";
 import { formatHours, formatMoney, formatNumber, formatToday } from "@/app/lib/nomcurry/format";
 import type { AppState, MutateAppState } from "@/app/types/nomcurry";
 
@@ -13,20 +12,6 @@ export type DashboardScreenProps = {
   reload: () => void;
   mutate: MutateAppState;
 };
-
-function getMonthKey(dateStr: string) {
-  return normalizeDateKey(dateStr).slice(0, 7); // "YYYY-MM"
-}
-
-function currentMonthKey() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function formatMonthLabel(monthKey: string) {
-  const [year, month] = monthKey.split("-");
-  return `Tháng ${Number(month)}/${year}`;
-}
 
 export function DashboardScreen({ state, reload, mutate }: DashboardScreenProps) {
   return (

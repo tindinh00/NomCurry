@@ -1,14 +1,40 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { AppError, badRequest, unauthorized } from "@/app/lib/domain/errors";
 
 export function apiSuccess(data: unknown) {
   return NextResponse.json({ ok: true, data });
 }
 
 export function apiFailure(error: unknown) {
+  const status = error instanceof AppError ? error.status : 500;
+  const code = error instanceof AppError ? error.code : "INTERNAL_ERROR";
   const message = error instanceof Error ? error.message : String(error);
-  console.error("[API Error]", message);
-  return NextResponse.json({ ok: false, error: { message } }, { status: 500 });
+  console.error("[API Error]", { status, code, message });
+  return NextResponse.json({ ok: false, error: { code, message } }, { status });
+}
+
+export function apiHandler(handler: (request: Request) => Promise<unknown>) {
+  return async (request: Request) => {
+    try {
+      return apiSuccess(await handler(request));
+    } catch (error) {
+      return apiFailure(error);
+    }
+  };
+}
+
+export async function readJsonBody(request: Request): Promise<Record<string, unknown>> {
+  try {
+    const body = await request.json();
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      throw badRequest("Body JSON không hợp lệ.");
+    }
+    return body as Record<string, unknown>;
+  } catch (error) {
+    if (error instanceof AppError) throw error;
+    throw badRequest("Body JSON không hợp lệ.");
+  }
 }
 
 function getCookie(request: Request, name: string): string | null {
@@ -40,7 +66,7 @@ export async function resolveActorEmail(body: Record<string, unknown>, request: 
     (typeof body.email === "string" ? body.email.trim() : "") ||
     (loggedOut === "true" ? "" : (isDev ? (process.env.NOMCURRY_DEV_ACTOR_EMAIL ?? "") : ""));
     
-  if (!email) throw new Error("Không xác định được email người dùng.");
+  if (!email) throw unauthorized();
   return email;
 }
 

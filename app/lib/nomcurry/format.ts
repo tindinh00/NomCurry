@@ -1,5 +1,8 @@
+import { APP_TIME_ZONE } from "@/app/lib/nomcurry/date";
+
 export function formatToday() {
   return new Intl.DateTimeFormat("vi-VN", {
+    timeZone: APP_TIME_ZONE,
     weekday: "long",
     day: "2-digit",
     month: "2-digit",

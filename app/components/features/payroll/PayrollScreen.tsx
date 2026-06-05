@@ -51,7 +51,7 @@ export function PayrollScreen({ state, mutate }: PayrollScreenProps) {
     const rateMap = new Map(state.payrollSummary.map((r) => [r.employeeId, r.hourlyRate]));
     const nameMap = new Map(state.payrollSummary.map((r) => [r.employeeId, r.employeeName]));
 
-    const filtered = monthFilter === "all"
+    const filtered = monthFilter === "tất cả"
       ? state.attendanceItems.filter((item) => item.status === "Đã kết ca")
       : state.attendanceItems.filter(
           (item) => item.status === "Đã kết ca" && getMonthKey(item.date) === monthFilter
@@ -117,7 +117,7 @@ export function PayrollScreen({ state, mutate }: PayrollScreenProps) {
                       <SelectGroup>
                         {state.payrollSummary.map((row) => (
                           <SelectItem key={row.employeeId} value={row.employeeId}>
-                            {row.employeeName} ({row.employeeId})
+                            {row.employeeName}
                           </SelectItem>
                         ))}
                       </SelectGroup>
@@ -157,7 +157,7 @@ export function PayrollScreen({ state, mutate }: PayrollScreenProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-                  <SelectItem value="all">Tất cả</SelectItem>
+                  <SelectItem value="tất cả">Tất cả</SelectItem>
                   {availableMonths.map((m) => (
                     <SelectItem key={m} value={m}>{formatMonthLabel(m)}</SelectItem>
                   ))}

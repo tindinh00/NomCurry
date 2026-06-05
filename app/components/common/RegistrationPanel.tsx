@@ -33,11 +33,11 @@ export type RegistrationPanelProps = {
  */
 export function RegistrationPanel({ title, description, state, rows, mutate, allowWeekApprove = false }: RegistrationPanelProps) {
   const [query, setQuery] = useState("");
-  const [status, setStatus] = useState("all");
+  const [status, setStatus] = useState("tất cả");
   const [page, setPage] = useState(1);
 
   const filtered = useMemo(() => rows
-    .filter((row) => status === "all" || row["Tình Trạng"] === status)
+    .filter((row) => status === "tất cả" || row["Tình Trạng"] === status)
     .filter((row) => !query || registrationHaystack(state, row).includes(query.toLowerCase()))
     .sort(sortRegistrationsNewest), [query, rows, state, status]);
 
@@ -68,7 +68,7 @@ export function RegistrationPanel({ title, description, state, rows, mutate, all
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                <SelectItem value="tất cả">Tất cả trạng thái</SelectItem>
                 <SelectItem value={REGISTRATION_STATUS.pending}>Chờ duyệt</SelectItem>
                 <SelectItem value={REGISTRATION_STATUS.approved}>Đã chốt</SelectItem>
                 <SelectItem value={REGISTRATION_STATUS.rejected}>Từ chối</SelectItem>

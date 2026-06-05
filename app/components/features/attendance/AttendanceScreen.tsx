@@ -1,5 +1,9 @@
 "use client";
 
+import { useState } from "react";
+import { Loader2Icon } from "lucide-react";
+import { cn } from "@/lib/utils";
+
 import { ReloadButton } from "@/app/components/common/Actions";
 import { ScreenHeader } from "@/app/components/common/ScreenHeader";
 import { StatusBadge } from "@/app/components/common/StatusBadge";
@@ -24,16 +28,38 @@ export type AttendanceScreenProps = {
 
 export function AttendanceScreen({ state, reload, mutate }: AttendanceScreenProps) {
   const checkout = useAttendanceCheckout(state);
+  const [isCheckingIn, setIsCheckingIn] = useState(false);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
   const active = state.attendanceItems.find((item) => item.status === ATTENDANCE_STATUS.inProgress);
-  const pending = state.attendanceItems.find((item) => item.status === ATTENDANCE_STATUS.notCheckedIn && normalizeDateKey(item.date) === todayKey())
-    || state.attendanceItems.find((item) => item.status === ATTENDANCE_STATUS.notCheckedIn);
+
+  const getDisplayStatus = (item: typeof state.attendanceItems[0]) => {
+    if (item.status === ATTENDANCE_STATUS.notCheckedIn) {
+      const shiftName = findShift(state, item.shiftId)?.["Tên Ca"] || "";
+      if (isShiftExpired(shiftName, item.date)) {
+        return "Quên điểm danh";
+      }
+    }
+    if (item.status === ATTENDANCE_STATUS.inProgress) {
+      const shiftName = findShift(state, item.shiftId)?.["Tên Ca"] || "";
+      if (isShiftExpired(shiftName, item.date)) {
+        return "Quên kết ca";
+      }
+    }
+    return item.status;
+  };
+
+  const pending = state.attendanceItems.find((item) => {
+    if (item.status !== ATTENDANCE_STATUS.notCheckedIn) return false;
+    const shiftName = findShift(state, item.shiftId)?.["Tên Ca"] || "";
+    return !isShiftExpired(shiftName, item.date) && normalizeDateKey(item.date) === todayKey();
+  });
 
   return (
     <section className="grid gap-5">
       <ScreenHeader
         eyebrow="Điểm danh"
         title="Vào ca và kết ca"
-        subtitle="Chỉ các ca đã được duyệt mới xuất hiện ở đây. Lương tính theo số giờ thực tế sau khi kết ca."
+        subtitle="Quên điểm danh kết ca là ăn đòn nha mấy đứa 👊💥"
         action={<ReloadButton reload={reload} />}
       />
 
@@ -45,35 +71,50 @@ export function AttendanceScreen({ state, reload, mutate }: AttendanceScreenProp
           </CardHeader>
           <CardContent>
             {active ? (
-              <div className="grid gap-4 rounded-lg border bg-muted/40 p-4">
-                <div className="grid gap-1">
-                  <StatusBadge status={ATTENDANCE_STATUS.inProgress} />
-                  <h3 className="text-xl font-semibold">{findShift(state, active.shiftId)?.["Tên Ca"] || active.shiftId}</h3>
+              <div className="grid gap-4 rounded-lg border bg-muted/40 p-6 text-center justify-items-center">
+                <div className="grid gap-1.5 justify-items-center">
+                  <StatusBadge status={getDisplayStatus(active)} />
+                  <h3 className="text-2xl font-bold mt-1 text-foreground">{findShift(state, active.shiftId)?.["Tên Ca"] || active.shiftId}</h3>
                   <p className="text-sm text-muted-foreground">
                     Vào ca lúc: <span className="font-medium text-foreground">{active.checkInAt}</span>
                   </p>
                 </div>
-                <Button variant="destructive" size="lg" onClick={() => checkout.setCheckoutId(active.registrationId)}>
+                <Button variant="destructive" className="h-12 text-base font-semibold w-full" onClick={() => checkout.setCheckoutId(active.registrationId)}>
                   Kết ca
                 </Button>
               </div>
             ) : pending ? (
-              <div className="grid gap-4 rounded-lg border bg-muted/40 p-4">
-                <div className="grid gap-1">
+              <div className="grid gap-4 rounded-lg border bg-muted/40 p-6 text-center justify-items-center">
+                <div className="grid gap-1.5 justify-items-center">
                   <StatusBadge status={ATTENDANCE_STATUS.notCheckedIn} />
-                  <h3 className="text-xl font-semibold">{findShift(state, pending.shiftId)?.["Tên Ca"] || pending.shiftId}</h3>
+                  <h3 className="text-2xl font-bold mt-1 text-foreground">{findShift(state, pending.shiftId)?.["Tên Ca"] || pending.shiftId}</h3>
                   <p className="text-sm text-muted-foreground">
                     Ngày làm: <span className="font-medium text-foreground">{pending.date}</span>
                   </p>
                 </div>
-                <Button size="lg" onClick={() => mutate("/api/attendance/check-in", { registrationId: pending.registrationId }, "Điểm danh thành công")}>
-                  Điểm danh
+                <Button
+                  className={cn(
+                    "h-12 text-base font-semibold transition-all duration-300",
+                    isCheckingIn ? "w-12 min-w-12 rounded-full px-0" : "w-full"
+                  )}
+                  disabled={isCheckingIn}
+                  onClick={() => {
+                    setIsCheckingIn(true);
+                    mutate("/api/attendance/check-in", { registrationId: pending.registrationId }, "Điểm danh thành công")
+                      .finally(() => setIsCheckingIn(false));
+                  }}
+                >
+                  {isCheckingIn ? (
+                    <Loader2Icon className="size-5 animate-spin" />
+                  ) : (
+                    "Điểm danh"
+                  )}
                 </Button>
               </div>
             ) : (
               <Alert>
-                <AlertTitle>Không có ca cần điểm danh</AlertTitle>
-                <AlertDescription>Hôm nay bạn không có ca làm việc nào cần điểm danh.</AlertDescription>
+                <AlertTitle>Ủa, chưa tới ca làm mà ta? 🤔</AlertTitle>
+                <AlertDescription>Đã vào ca đâu mà đã vào đây điểm danh rồi đằng ấy ơi!</AlertDescription>
               </Alert>
             )}
           </CardContent>
@@ -92,9 +133,12 @@ export function AttendanceScreen({ state, reload, mutate }: AttendanceScreenProp
                     <p className="font-medium">{item.date}</p>
                     <p className="text-sm text-muted-foreground">{findShift(state, item.shiftId)?.["Tên Ca"] || item.shiftId}</p>
                   </div>
-                  <StatusBadge status={item.status} />
+                  <StatusBadge status={getDisplayStatus(item)} />
                 </div>
-                <p className="text-sm text-muted-foreground">Vào: {item.checkInAt || "-"} · Ra: {item.checkOutAt || "-"}</p>
+                <div className="grid gap-0.5 text-sm text-muted-foreground">
+                  <p>Vào: {item.checkInAt || "-"}</p>
+                  <p>Ra: {item.checkOutAt || "-"}</p>
+                </div>
                 <p className="text-sm">Số giờ làm: <span className="font-medium">{formatHours(item.workedHours)} giờ</span></p>
                 {item.attendanceNote ? <p className="text-sm text-muted-foreground">Ghi chú: {item.attendanceNote}</p> : null}
               </div>
@@ -108,8 +152,8 @@ export function AttendanceScreen({ state, reload, mutate }: AttendanceScreenProp
         </Card>
       </div>
 
-      <Dialog open={Boolean(checkout.checkoutId)} onOpenChange={(open) => !open && checkout.close()}>
-        <DialogContent>
+      <Dialog open={Boolean(checkout.checkoutId)} onOpenChange={(open) => !open && !isCheckingOut && checkout.close()}>
+        <DialogContent showCloseButton={!isCheckingOut}>
           <DialogHeader>
             <DialogTitle>Ghi chú kết ca</DialogTitle>
             <DialogDescription>
@@ -129,22 +173,62 @@ export function AttendanceScreen({ state, reload, mutate }: AttendanceScreenProp
               />
             </Field>
           </FieldGroup>
-          <DialogFooter>
-            <Button variant="outline" onClick={checkout.close}>Hủy</Button>
+          <DialogFooter className={cn(isCheckingOut && "items-center justify-center")}>
+            {!isCheckingOut && (
+              <Button variant="outline" size="lg" className="w-full sm:w-44" onClick={checkout.close}>Hủy</Button>
+            )}
             <Button
+              size="lg"
+              className={cn(
+                "transition-all duration-300",
+                isCheckingOut ? "w-12 min-w-12 h-12 px-0 rounded-full" : "w-full sm:w-44"
+              )}
+              disabled={isCheckingOut}
               onClick={() => {
                 const id = checkout.checkoutId;
-                checkout.close();
-                void mutate("/api/attendance/check-out", { registrationId: id, note: checkout.checkoutNote }, "Kết ca thành công");
-                checkout.resetNote();
+                setIsCheckingOut(true);
+                mutate("/api/attendance/check-out", { registrationId: id, note: checkout.checkoutNote }, "Kết ca thành công")
+                  .then(() => {
+                    checkout.close();
+                    checkout.resetNote();
+                  })
+                  .finally(() => {
+                    setIsCheckingOut(false);
+                  });
               }}
             >
-              Xác nhận kết ca
+              {isCheckingOut ? (
+                <Loader2Icon className="size-5 animate-spin" />
+              ) : (
+                "Xác nhận kết ca"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </section>
   );
+}
+
+function parseShiftTime(timeStr: string, dateStr: string) {
+  const matches = timeStr.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
+  if (!matches) return null;
+  
+  const [_, startH, startM, endH, endM] = matches.map(Number);
+  
+  const start = new Date(`${dateStr}T${String(startH).padStart(2, '0')}:${String(startM).padStart(2, '0')}:00`);
+  const end = new Date(`${dateStr}T${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}:00`);
+  
+  if (end < start) {
+    end.setDate(end.getDate() + 1);
+  }
+  
+  return { start, end };
+}
+
+function isShiftExpired(shiftName: string, dateStr: string) {
+  const timeRange = parseShiftTime(shiftName, dateStr);
+  if (!timeRange) return false;
+  return new Date() > timeRange.end;
 }
 

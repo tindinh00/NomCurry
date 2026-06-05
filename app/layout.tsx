@@ -9,6 +9,10 @@ const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 export const metadata: Metadata = {
   title: "NOM CURRY - Quản lý ca làm",
   description: "Shift registration, attendance, and payroll management for NomCurry.",
+  icons: {
+    icon: "/assets/logo.jpeg?v=1",
+    apple: "/assets/logoiphone.png?v=1",
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

@@ -45,8 +45,8 @@ export function ShiftRegistrationScreen({ state, mutate }: ShiftRegistrationScre
       void mutate("/api/registrations", {
         monday: shiftRegistration.monday,
         slots: shiftRegistration.slots,
-        note: shiftRegistration.note,
-      }, "Cập nhật đăng ký tuần thành công").finally(() => {
+        note: "",
+      }, "Gút chóp!!! Chờ anh chị duyệt nhé").finally(() => {
         setBtnPhase("idle");
       });
     }, 420);
@@ -57,28 +57,30 @@ export function ShiftRegistrationScreen({ state, mutate }: ShiftRegistrationScre
       <ScreenHeader
         eyebrow="Đăng ký ca"
         title="Chọn ca làm theo tuần"
-        subtitle="Tick các ca bạn làm được trong từng ngày. Hệ thống tạo đăng ký riêng cho từng ca."
+        subtitle="Mấy đứa đăng ký vừa vừa thui, anh chị không có xiền trả đâu!!! 💸"
       />
 
       <Card>
         <CardHeader>
           <CardTitle>Chọn ca làm</CardTitle>
-          <CardDescription>{getWeekLabel(shiftRegistration.monday)}</CardDescription>
           <CardAction>
             <Badge variant="secondary">Chờ duyệt</Badge>
           </CardAction>
         </CardHeader>
         <CardContent className="grid gap-5">
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <Button variant="outline" size="icon" onClick={shiftRegistration.previousWeek} aria-label="Tuần trước">
-              <ChevronLeftIcon />
-            </Button>
-            <Button variant="outline" className="min-w-24" onClick={shiftRegistration.currentWeek}>
-              Tuần này
-            </Button>
-            <Button variant="outline" size="icon" onClick={shiftRegistration.nextWeek} aria-label="Tuần sau">
-              <ChevronRightIcon />
-            </Button>
+          <div className="flex flex-col items-center justify-center gap-2.5">
+            <p className="text-sm text-muted-foreground">{getWeekLabel(shiftRegistration.monday)}</p>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="icon" onClick={shiftRegistration.previousWeek} aria-label="Tuần trước">
+                <ChevronLeftIcon />
+              </Button>
+              <Button variant="outline" className="min-w-24" onClick={shiftRegistration.currentWeek}>
+                Tuần này
+              </Button>
+              <Button variant="outline" size="icon" onClick={shiftRegistration.nextWeek} aria-label="Tuần sau">
+                <ChevronRightIcon />
+              </Button>
+            </div>
           </div>
 
           <div className="grid gap-3">
@@ -132,18 +134,9 @@ export function ShiftRegistrationScreen({ state, mutate }: ShiftRegistrationScre
             ))}
           </div>
 
-          <form onSubmit={(event) => { event.preventDefault(); void mutate("/api/registrations", { monday: shiftRegistration.monday, slots: shiftRegistration.slots, note: shiftRegistration.note }, "Cập nhật đăng ký tuần thành công"); }}>
+          <form className="hidden lg:block" onSubmit={(event) => { event.preventDefault(); void mutate("/api/registrations", { monday: shiftRegistration.monday, slots: shiftRegistration.slots, note: "" }, "Gút chóp!!! Chờ anh chị duyệt nhé"); }}>
             <FieldGroup>
-              <Field>
-                <FieldLabel htmlFor="week-note">Ghi chú chung</FieldLabel>
-                <Textarea
-                  id="week-note"
-                  value={shiftRegistration.note}
-                  onChange={(event) => shiftRegistration.setNote(event.target.value)}
-                  placeholder="Dùng làm ghi chú mặc định nếu từng ca không nhập riêng"
-                />
-              </Field>
-              <Button disabled={!canSubmit} type="submit">
+              <Button disabled={!canSubmit} type="submit" className="w-full sm:w-auto">
                 {submitLabel}
               </Button>
             </FieldGroup>
@@ -173,7 +166,10 @@ export function ShiftRegistrationScreen({ state, mutate }: ShiftRegistrationScre
           type="button"
           disabled={!canSubmit || btnPhase !== "idle"}
           onClick={handleFloatingClick}
-          className="relative flex h-14 min-w-48 items-center justify-center gap-3 overflow-hidden rounded-full bg-primary px-8 text-base font-semibold text-primary-foreground shadow-xl disabled:opacity-70"
+          className={cn(
+            "relative flex h-14 items-center justify-center overflow-hidden rounded-full bg-primary text-base font-semibold text-primary-foreground shadow-xl transition-all duration-300 disabled:opacity-70",
+            btnPhase === "loading" ? "w-14 min-w-14 px-0" : "min-w-48 px-8 gap-3"
+          )}
         >
           {/* Loading spinner */}
           {btnPhase === "loading" && (

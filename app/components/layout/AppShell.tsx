@@ -67,9 +67,11 @@ export function AppShell({ children, state, route, onRoute }: AppShellProps) {
       <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-5 px-4 py-5 pb-24 sm:px-6 lg:px-8">
         <header className="grid grid-cols-[1fr_auto] items-center gap-4 lg:grid-cols-[auto_1fr_auto]">
           <Button variant="ghost" className="h-auto justify-start gap-3 px-0" onClick={() => onRoute("dashboard")}>
-            <span className="grid size-10 place-items-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground">
-              NC
-            </span>
+            <img 
+              src="/assets/logo.jpeg" 
+              alt="Nom Curry Logo" 
+              className="size-10 rounded-lg object-cover" 
+            />
             <span className="flex flex-col items-start leading-tight">
               <span className="font-semibold">NOM CURRY</span>
               <span className="text-xs text-muted-foreground">Quản lý ca làm</span>
@@ -150,14 +152,14 @@ export function AppShell({ children, state, route, onRoute }: AppShellProps) {
       {visibleNav.length ? (
         <nav
           className={cn(
-            "fixed inset-x-0 bottom-0 grid gap-2 border-t bg-background/95 p-2 backdrop-blur lg:hidden",
+            "fixed inset-x-0 bottom-0 grid gap-2 border-t bg-background/95 pt-2 px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] backdrop-blur lg:hidden z-40",
             visibleNav.length === 2 ? "grid-cols-2" : "grid-cols-3 sm:grid-cols-5"
           )}
           style={mobileIndicatorStyle}
         >
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute bottom-2 top-2 rounded-lg bg-primary shadow-sm transition-transform duration-300 ease-out motion-reduce:transition-none"
+            className="pointer-events-none absolute top-2 left-2 h-12 rounded-lg bg-primary shadow-sm transition-transform duration-300 ease-out motion-reduce:transition-none"
             style={{
               width: "calc((100% - 1rem - (var(--tab-count) - 1) * 0.5rem) / var(--tab-count))",
               transform: "translateX(calc(var(--active-index) * (100% + 0.5rem)))",
@@ -169,7 +171,7 @@ export function AppShell({ children, state, route, onRoute }: AppShellProps) {
               variant="ghost"
               size="lg"
               className={cn(
-                "relative h-12 text-sm font-semibold transition-colors duration-200",
+                "relative h-12 w-full text-sm font-semibold transition-colors duration-200",
                 route === item.key
                   ? "text-primary-foreground hover:bg-transparent hover:text-primary-foreground"
                   : "text-foreground hover:bg-muted"

@@ -5,15 +5,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export function LoadingScreen() {
   return (
-    <div className="grid gap-4">
-      <Skeleton className="h-28 rounded-xl" />
-      <div className="grid gap-4 md:grid-cols-4">
-        <Skeleton className="h-24 rounded-xl" />
-        <Skeleton className="h-24 rounded-xl" />
-        <Skeleton className="h-24 rounded-xl" />
-        <Skeleton className="h-24 rounded-xl" />
-      </div>
-      <Skeleton className="h-80 rounded-xl" />
+    <div className="flex flex-1 items-center justify-center py-20 min-h-[60vh]">
+      <Loader2Icon className="size-10 animate-spin text-primary" />
     </div>
   );
 }

@@ -6,7 +6,7 @@ export function StatusBadge({ status }: { status: string }) {
     return <Badge variant="secondary">{status}</Badge>;
   }
 
-  if (status === REGISTRATION_STATUS.rejected || status === ATTENDANCE_STATUS.notCheckedIn) {
+  if (status === REGISTRATION_STATUS.rejected || status === ATTENDANCE_STATUS.notCheckedIn || status === "Quên điểm danh" || status === "Quên kết ca") {
     return <Badge variant="destructive">{status}</Badge>;
   }
 

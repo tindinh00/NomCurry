@@ -274,6 +274,10 @@ export async function checkIn(actorEmail: string, registrationId: string): Promi
   if (actor["Vai trò"] !== "Quản lý" && reg["Nhân Viên"] !== actor["Mã NV"]) {
     throw new Error("Bạn không có quyền điểm danh ca của nhân viên khác.");
   }
+  const todayKey = normalizeDateKey(new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Ho_Chi_Minh" }));
+  if (normalizeDateKey(reg["Ngày"]) !== todayKey) {
+    throw new Error("Chỉ có thể điểm danh các ca làm việc trong ngày hôm nay.");
+  }
 
   const existing = attendanceRows.find((r) => r["Mã Đăng Ký"] === registrationId);
   if (existing?.["Trạng thái"] === ATTENDANCE_STATUS.completed) throw new Error("Ca này đã kết ca, không thể điểm danh lại.");

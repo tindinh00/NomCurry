@@ -26,28 +26,33 @@ export function LoginScreen({ state, onSubmit }: LoginScreenProps) {
   return (
     <main className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
       <section className="flex flex-col justify-center gap-3">
+        <img 
+          src="/assets/logo.jpeg" 
+          alt="Nom Curry Logo" 
+          className="size-16 rounded-2xl object-cover mb-2 shadow-md" 
+        />
         <Badge variant="secondary" className="w-fit">
-          {hasDefaultEmail ? "Đăng ký thành viên" : "Hệ thống quản lý ca làm"}
+          {hasDefaultEmail ? "Bước cuối cùng nè 🚀" : "Nom Curry chào đằng ấy nhé! 👋"}
         </Badge>
         <h1 className="max-w-2xl text-4xl font-semibold tracking-normal sm:text-5xl">
           {hasDefaultEmail 
-            ? "Một bước cuối để bắt đầu công việc của bạn."
-            : "Đăng nhập bằng tài khoản Google để tiếp tục."}
+            ? "Cùng hoàn tất thông tin để bắt đầu công việc thôi nào!"
+            : "Chúc bạn có một ngày làm việc 'mười điểm không có nhưng' nhé! 💯✨"}
         </h1>
         <p className="max-w-xl text-muted-foreground">
           {hasDefaultEmail
-            ? "Vui lòng nhập Họ tên chính xác để quản lý ghi nhận lịch làm việc và tính lương cho bạn."
-            : "Hệ thống sử dụng tài khoản Google để điểm danh và đăng ký lịch làm trực tiếp qua Google Sheets."}
+            ? "Bạn hãy điền Họ và tên chính xác để tớ (Nom Curry) ghi nhận lịch làm và tính lương đúng cho mình nha."
+            : "Đăng nhập bằng tài khoản Google để bắt đầu đăng ký ca làm và điểm danh cùng Nom Curry nhé."}
         </p>
       </section>
 
       <Card>
         <CardHeader>
-          <CardTitle>{hasDefaultEmail ? "Hoàn tất đăng ký" : "Đăng nhập"}</CardTitle>
+          <CardTitle>{hasDefaultEmail ? "Tạo hồ sơ của bạn" : "Đăng nhập ngay"}</CardTitle>
           <CardDescription>
             {hasDefaultEmail 
-              ? "Bổ sung thông tin cá nhân của bạn." 
-              : "Xác thực danh tính của bạn qua dịch vụ Google."}
+              ? "Cho tớ biết tên đầy đủ của bạn nhé." 
+              : "Kết nối tài khoản Google của bạn để tiếp tục."}
           </CardDescription>
           <CardAction>
             <Badge variant="outline">{hasDefaultEmail ? "Bước 2/2" : "Bước 1/2"}</Badge>

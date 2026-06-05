@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CheckCheckIcon, CheckIcon, Trash2Icon, XIcon } from "lucide-react";
+import { CheckCheckIcon, CheckIcon, Loader2Icon, Trash2Icon, XIcon } from "lucide-react";
 
 import { Pagination } from "@/app/components/common/Actions";
 import { StatusBadge } from "@/app/components/common/StatusBadge";
@@ -35,6 +35,7 @@ export function RegistrationPanel({ title, description, state, rows, mutate, all
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("tất cả");
   const [page, setPage] = useState(1);
+  const [loadingWeekKey, setLoadingWeekKey] = useState<string | null>(null);
 
   const filtered = useMemo(() => rows
     .filter((row) => status === "tất cả" || row["Tình Trạng"] === status)
@@ -91,9 +92,18 @@ export function RegistrationPanel({ title, description, state, rows, mutate, all
                             size="sm"
                             variant="outline"
                             className="gap-1.5 cursor-pointer"
-                            onClick={() => mutate("/api/registrations/week-approve", { monday: group.weekKey }, "Đã duyệt cả tuần")}
+                            disabled={loadingWeekKey !== null}
+                            onClick={() => {
+                              setLoadingWeekKey(group.weekKey);
+                              mutate("/api/registrations/week-approve", { monday: group.weekKey }, "Đã duyệt cả tuần")
+                                .finally(() => setLoadingWeekKey(null));
+                            }}
                           >
-                            <CheckCheckIcon className="size-4" />
+                            {loadingWeekKey === group.weekKey ? (
+                              <Loader2Icon className="size-4 animate-spin" />
+                            ) : (
+                              <CheckCheckIcon className="size-4" />
+                            )}
                             <span>Duyệt cả tuần</span>
                           </Button>
                         ) : null}
@@ -123,9 +133,18 @@ export function RegistrationPanel({ title, description, state, rows, mutate, all
                           <Button
                             size="sm"
                             className="gap-1.5 cursor-pointer"
-                            onClick={() => mutate("/api/registrations/week-approve", { monday: group.weekKey }, "Đã duyệt cả tuần")}
+                            disabled={loadingWeekKey !== null}
+                            onClick={() => {
+                              setLoadingWeekKey(group.weekKey);
+                              mutate("/api/registrations/week-approve", { monday: group.weekKey }, "Đã duyệt cả tuần")
+                                .finally(() => setLoadingWeekKey(null));
+                            }}
                           >
-                            <CheckCheckIcon className="size-4" />
+                            {loadingWeekKey === group.weekKey ? (
+                              <Loader2Icon className="size-4 animate-spin" />
+                            ) : (
+                              <CheckCheckIcon className="size-4" />
+                            )}
                             <span>Duyệt cả tuần</span>
                           </Button>
                         ) : null}
@@ -220,10 +239,13 @@ function RegistrationMobileCard({ state, row, mutate }: { state: AppState; row: 
 }
 
 function RegistrationActions({ state, row, mutate }: { state: AppState; row: SheetRow; mutate: MutateAppState }) {
+  const [loadingAction, setLoadingAction] = useState<"approve" | "reject" | "delete" | null>(null);
+
   if (!state.isManager) return null;
 
   const registrationId = row["Mã Đăng Ký"];
   const pending = row["Tình Trạng"] === REGISTRATION_STATUS.pending;
+  const isBusy = loadingAction !== null;
 
   return (
     <div className="flex items-center gap-1.5">
@@ -233,18 +255,36 @@ function RegistrationActions({ state, row, mutate }: { state: AppState; row: She
             className="flex-1 gap-1.5 cursor-pointer"
             variant="default"
             size="sm"
-            onClick={() => mutate("/api/registrations/status", { registrationId, status: REGISTRATION_STATUS.approved }, "Đã duyệt ca")}
+            disabled={isBusy}
+            onClick={() => {
+              setLoadingAction("approve");
+              mutate("/api/registrations/status", { registrationId, status: REGISTRATION_STATUS.approved }, "Đã duyệt ca")
+                .finally(() => setLoadingAction(null));
+            }}
           >
-            <CheckIcon className="size-4" />
+            {loadingAction === "approve" ? (
+              <Loader2Icon className="size-4 animate-spin" />
+            ) : (
+              <CheckIcon className="size-4" />
+            )}
             <span>Duyệt</span>
           </Button>
           <Button
             className="flex-1 gap-1.5 cursor-pointer"
             variant="outline"
             size="sm"
-            onClick={() => mutate("/api/registrations/status", { registrationId, status: REGISTRATION_STATUS.rejected }, "Đã từ chối ca")}
+            disabled={isBusy}
+            onClick={() => {
+              setLoadingAction("reject");
+              mutate("/api/registrations/status", { registrationId, status: REGISTRATION_STATUS.rejected }, "Đã từ chối ca")
+                .finally(() => setLoadingAction(null));
+            }}
           >
-            <XIcon className="size-4" />
+            {loadingAction === "reject" ? (
+              <Loader2Icon className="size-4 animate-spin" />
+            ) : (
+              <XIcon className="size-4" />
+            )}
             <span>Từ chối</span>
           </Button>
         </>
@@ -253,9 +293,18 @@ function RegistrationActions({ state, row, mutate }: { state: AppState; row: She
         className="flex-1 gap-1.5 cursor-pointer"
         variant="destructive"
         size="sm"
-        onClick={() => mutate("/api/registrations/delete", { registrationId }, "Đã xóa đăng ký")}
+        disabled={isBusy}
+        onClick={() => {
+          setLoadingAction("delete");
+          mutate("/api/registrations/delete", { registrationId }, "Đã xóa đăng ký")
+            .finally(() => setLoadingAction(null));
+        }}
       >
-        <Trash2Icon className="size-4" />
+        {loadingAction === "delete" ? (
+          <Loader2Icon className="size-4 animate-spin" />
+        ) : (
+          <Trash2Icon className="size-4" />
+        )}
         <span>Xóa</span>
       </Button>
     </div>

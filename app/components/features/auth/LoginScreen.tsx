@@ -26,11 +26,6 @@ export function LoginScreen({ state, onSubmit }: LoginScreenProps) {
   return (
     <main className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
       <section className="flex flex-col justify-center gap-3">
-        <img 
-          src="/assets/logo.jpeg" 
-          alt="Nom Curry Logo" 
-          className="size-16 rounded-2xl object-cover mb-2 shadow-md" 
-        />
         <Badge variant="secondary" className="w-fit">
           {hasDefaultEmail ? "Bước cuối cùng nè 🚀" : "Nom Curry chào đằng ấy nhé! 👋"}
         </Badge>

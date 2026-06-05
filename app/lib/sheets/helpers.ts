@@ -1,4 +1,5 @@
 import type { sheets_v4 } from "googleapis";
+import { APP_TIME_ZONE } from "@/app/lib/nomcurry/date";
 import { getSheetsClient, getSpreadsheetId } from "./client";
 
 export type SheetRow = Record<string, string>;
@@ -167,7 +168,7 @@ export function parseMoney(value: unknown): number {
 }
 
 export function timestamp(): string {
-  return new Date().toLocaleString("sv-SE", { timeZone: "Asia/Ho_Chi_Minh" }).replace("T", " ");
+  return new Date().toLocaleString("sv-SE", { timeZone: APP_TIME_ZONE }).replace("T", " ");
 }
 
 export function calculateWorkedHours(start: string, end: string): number {

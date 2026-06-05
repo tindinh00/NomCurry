@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 
 import { ScreenHeader } from "@/app/components/common/ScreenHeader";
 import { usePayrollRate } from "@/app/hooks/usePayrollRate";
-import { normalizeDateKey } from "@/app/lib/nomcurry/date";
+import { currentMonthKey, normalizeDateKey } from "@/app/lib/nomcurry/date";
 import { formatHours, formatMoney, formatNumber } from "@/app/lib/nomcurry/format";
 import type { AppState, MutateAppState } from "@/app/types/nomcurry";
 import { Badge } from "@/components/ui/badge";
@@ -22,11 +22,6 @@ export type PayrollScreenProps = {
 
 function getMonthKey(dateStr: string) {
   return normalizeDateKey(dateStr).slice(0, 7);
-}
-
-function currentMonthKey() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
 function formatMonthLabel(monthKey: string) {

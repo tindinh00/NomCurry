@@ -9,7 +9,7 @@ import { ScreenHeader } from "@/app/components/common/ScreenHeader";
 import { StatusBadge } from "@/app/components/common/StatusBadge";
 import { useAttendanceCheckout } from "@/app/hooks/useAttendanceCheckout";
 import { ATTENDANCE_STATUS } from "@/app/lib/nomcurry/constants";
-import { normalizeDateKey, todayKey } from "@/app/lib/nomcurry/date";
+import { appDateTime, normalizeDateKey, todayKey } from "@/app/lib/nomcurry/date";
 import { formatHours } from "@/app/lib/nomcurry/format";
 import { findShift } from "@/app/lib/nomcurry/selectors";
 import type { AppState, MutateAppState } from "@/app/types/nomcurry";
@@ -214,13 +214,13 @@ function parseShiftTime(timeStr: string, dateStr: string) {
   const matches = timeStr.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
   if (!matches) return null;
   
-  const [_, startH, startM, endH, endM] = matches.map(Number);
+  const [, startH, startM, endH, endM] = matches.map(Number);
   
-  const start = new Date(`${dateStr}T${String(startH).padStart(2, '0')}:${String(startM).padStart(2, '0')}:00`);
-  const end = new Date(`${dateStr}T${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}:00`);
+  const start = appDateTime(dateStr, startH, startM);
+  let end = appDateTime(dateStr, endH, endM);
   
   if (end < start) {
-    end.setDate(end.getDate() + 1);
+    end = new Date(end.getTime() + 24 * 60 * 60 * 1000);
   }
   
   return { start, end };

@@ -1,3 +1,6 @@
+export const APP_TIME_ZONE = "Asia/Ho_Chi_Minh";
+export const APP_UTC_OFFSET = "+07:00";
+
 export function normalizeDateKey(value: string) {
   const date = String(value || "").trim();
   const iso = date.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
@@ -10,7 +13,23 @@ export function normalizeDateKey(value: string) {
 }
 
 export function todayKey() {
-  return formatDateKey(new Date());
+  return new Intl.DateTimeFormat("sv-SE", {
+    timeZone: APP_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+export function currentMonthKey() {
+  return todayKey().slice(0, 7);
+}
+
+export function appDateTime(dateStr: string, hour: number, minute: number) {
+  const dateKey = normalizeDateKey(dateStr);
+  return new Date(
+    `${dateKey}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00${APP_UTC_OFFSET}`
+  );
 }
 
 export function formatDateKey(date: Date) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CheckIcon, Trash2Icon, XIcon } from "lucide-react";
+import { CheckCheckIcon, CheckIcon, Trash2Icon, XIcon } from "lucide-react";
 
 import { Pagination } from "@/app/components/common/Actions";
 import { StatusBadge } from "@/app/components/common/StatusBadge";
@@ -90,9 +90,11 @@ export function RegistrationPanel({ title, description, state, rows, mutate, all
                           <Button
                             size="sm"
                             variant="outline"
+                            className="gap-1.5 cursor-pointer"
                             onClick={() => mutate("/api/registrations/week-approve", { monday: group.weekKey }, "Đã duyệt cả tuần")}
                           >
-                            Duyệt cả tuần
+                            <CheckCheckIcon className="size-4" />
+                            <span>Duyệt cả tuần</span>
                           </Button>
                         ) : null}
                       </div>
@@ -120,9 +122,11 @@ export function RegistrationPanel({ title, description, state, rows, mutate, all
                         {state.isManager && group.rows.some((r) => r["Tình Trạng"] === REGISTRATION_STATUS.pending) ? (
                           <Button
                             size="sm"
+                            className="gap-1.5 cursor-pointer"
                             onClick={() => mutate("/api/registrations/week-approve", { monday: group.weekKey }, "Đã duyệt cả tuần")}
                           >
-                            Duyệt cả tuần
+                            <CheckCheckIcon className="size-4" />
+                            <span>Duyệt cả tuần</span>
                           </Button>
                         ) : null}
                       </div>
@@ -226,33 +230,33 @@ function RegistrationActions({ state, row, mutate }: { state: AppState; row: She
       {pending ? (
         <>
           <Button
-            className="flex-1"
+            className="flex-1 gap-1.5 cursor-pointer"
             variant="default"
             size="sm"
-            title="Duyệt"
             onClick={() => mutate("/api/registrations/status", { registrationId, status: REGISTRATION_STATUS.approved }, "Đã duyệt ca")}
           >
-            <CheckIcon />
+            <CheckIcon className="size-4" />
+            <span>Duyệt</span>
           </Button>
           <Button
-            className="flex-1"
+            className="flex-1 gap-1.5 cursor-pointer"
             variant="outline"
             size="sm"
-            title="Từ chối"
             onClick={() => mutate("/api/registrations/status", { registrationId, status: REGISTRATION_STATUS.rejected }, "Đã từ chối ca")}
           >
-            <XIcon />
+            <XIcon className="size-4" />
+            <span>Từ chối</span>
           </Button>
         </>
       ) : null}
       <Button
-        className="flex-1"
+        className="flex-1 gap-1.5 cursor-pointer"
         variant="destructive"
         size="sm"
-        title="Xóa"
         onClick={() => mutate("/api/registrations/delete", { registrationId }, "Đã xóa đăng ký")}
       >
-        <Trash2Icon />
+        <Trash2Icon className="size-4" />
+        <span>Xóa</span>
       </Button>
     </div>
   );

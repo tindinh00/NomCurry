@@ -27,7 +27,9 @@ export function useNomCurryApp() {
       setState(data);
       setRoute((current) => normalizeRoute(current, data));
     } catch (err) {
-      setError(getErrorMessage(err));
+      const message = getErrorMessage(err);
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }

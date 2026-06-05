@@ -1,6 +1,5 @@
 "use client";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AppShell } from "@/app/components/layout/AppShell";
 import { LoadingScreen } from "@/app/components/common/AppFeedback";
 import { ApprovalScreen } from "@/app/components/features/approval/ApprovalScreen";
@@ -20,15 +19,6 @@ export function NomCurryApp() {
   return (
     <AppShell state={app.state} route={app.route} onRoute={app.navigate}>
       {app.loading ? <LoadingScreen /> : null}
-
-      {!app.loading && app.error ? (
-        <Alert variant="destructive" className="mb-4">
-          <AlertTitle>Thao tác thất bại</AlertTitle>
-          <AlertDescription>{app.error}</AlertDescription>
-        </Alert>
-      ) : null}
-
-
 
       {!app.loading && app.state && !app.state.employee ? (
         <LoginScreen

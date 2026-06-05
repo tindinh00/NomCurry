@@ -79,11 +79,49 @@ export async function updateRegistrationStatus(
   const registrations = await readObjects(SHEETS.registrations);
   const current = registrations.find((r) => r["Mã Đăng Ký"] === registrationId);
   if (!current) throw notFound("Không tìm thấy đăng ký: " + registrationId);
+  if (isDeleted(current)) throw conflict("Đăng ký này đã bị xóa.");
   if (current["Tình Trạng"] !== STATUS.pending) {
     throw conflict(`Ca này đã được ${current["Tình Trạng"].toLowerCase()} và không thể thay đổi nữa.`);
   }
+  if (status === STATUS.approved && hasApprovedRegistrationForSlot(registrations, current)) {
+    throw conflict("Ca này đã có nhân viên khác được duyệt. Vui lòng từ chối các đăng ký còn lại.");
+  }
 
   await updateByKey(SHEETS.registrations, "Mã Đăng Ký", registrationId, { "Tình Trạng": status });
+  return getInitialData(actorEmail);
+}
+
+export async function resolveSlotRegistration(actorEmail: string, registrationId: string): Promise<AppState> {
+  const employees = await readObjects(SHEETS.employees);
+  const actor = employees.find((row) => normalize(row["Email"]) === normalize(actorEmail));
+  if (!actor) throw unauthorized("Email đăng nhập chưa có trong bảng NhanVien.");
+  if (actor["Vai trò"] !== "Quản lý") throw forbidden("Chỉ quản lý mới được chọn nhân viên cho ca.");
+
+  const registrations = await readObjects(SHEETS.registrations);
+  const selected = registrations.find((r) => r["Mã Đăng Ký"] === registrationId);
+  if (!selected) throw notFound("Không tìm thấy đăng ký: " + registrationId);
+  if (isDeleted(selected)) throw conflict("Đăng ký này đã bị xóa.");
+  if (selected["Tình Trạng"] !== STATUS.pending) {
+    throw conflict(`Ca này đã được ${selected["Tình Trạng"].toLowerCase()} và không thể chọn lại.`);
+  }
+  if (hasApprovedRegistrationForSlot(registrations, selected)) {
+    throw conflict("Ca này đã có nhân viên khác được duyệt.");
+  }
+
+  const sameSlotPending = registrations.filter((row) =>
+    row["Mã Đăng Ký"] !== selected["Mã Đăng Ký"] &&
+    !isDeleted(row) &&
+    row["Tình Trạng"] === STATUS.pending &&
+    slotKey(row) === slotKey(selected)
+  );
+
+  await Promise.all([
+    updateByKey(SHEETS.registrations, "Mã Đăng Ký", selected["Mã Đăng Ký"], { "Tình Trạng": STATUS.approved }),
+    ...sameSlotPending.map((row) =>
+      updateByKey(SHEETS.registrations, "Mã Đăng Ký", row["Mã Đăng Ký"], { "Tình Trạng": STATUS.rejected })
+    ),
+  ]);
+
   return getInitialData(actorEmail);
 }
 
@@ -102,15 +140,25 @@ export async function approveWeekPending(actorEmail: string, mondayStr: string):
 
   const registrations = await readObjects(SHEETS.registrations);
   const toApprove = registrations.filter((row) => {
+    if (isDeleted(row)) return false;
     if (row["Tình Trạng"] !== STATUS.pending) return false;
     const d = parseDateKey(normalizeDateKey(row["Ngày"]));
     return d && d >= monday && d <= sunday;
   });
 
   if (!toApprove.length) throw conflict("Không có ca nào đang chờ duyệt trong tuần này.");
+  const pendingSlotCounts = buildSlotCounts(toApprove);
+  const approvable = toApprove.filter((row) =>
+    pendingSlotCounts.get(slotKey(row)) === 1 &&
+    !hasApprovedRegistrationForSlot(registrations, row)
+  );
+
+  if (!approvable.length) {
+    throw conflict("Không có ca không trùng để duyệt. Vui lòng chọn thủ công các ca bị trùng.");
+  }
 
   await Promise.all(
-    toApprove.map((row) =>
+    approvable.map((row) =>
       updateByKey(SHEETS.registrations, "Mã Đăng Ký", row["Mã Đăng Ký"], { "Tình Trạng": STATUS.approved })
     )
   );
@@ -158,4 +206,27 @@ async function softDeletePendingForWeek(employeeId: string, mondayStr: string): 
       updateByKey(SHEETS.registrations, "Mã Đăng Ký", row["Mã Đăng Ký"], { "IsDelete": "TRUE" })
     )
   );
+}
+
+function slotKey(row: Record<string, string>) {
+  return `${normalizeDateKey(row["Ngày"])}|${String(row["Ca Làm"] ?? "").trim()}`;
+}
+
+function hasApprovedRegistrationForSlot(registrations: Record<string, string>[], current: Record<string, string>) {
+  const currentKey = slotKey(current);
+  return registrations.some((row) =>
+    row["Mã Đăng Ký"] !== current["Mã Đăng Ký"] &&
+    !isDeleted(row) &&
+    row["Tình Trạng"] === STATUS.approved &&
+    slotKey(row) === currentKey
+  );
+}
+
+function buildSlotCounts(registrations: Record<string, string>[]) {
+  const counts = new Map<string, number>();
+  registrations.forEach((row) => {
+    const key = slotKey(row);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  });
+  return counts;
 }

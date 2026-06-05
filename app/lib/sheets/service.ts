@@ -4,6 +4,7 @@ export {
   addWeeklyRegistrations,
   approveWeekPending,
   deleteRegistration,
+  resolveSlotRegistration,
   updateRegistrationStatus,
 } from "@/app/lib/domain/registrations";
 export { checkIn, checkOut } from "@/app/lib/domain/attendance";

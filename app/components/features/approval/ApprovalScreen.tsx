@@ -1,6 +1,7 @@
 import { ReloadButton } from "@/app/components/common/Actions";
 import { RegistrationPanel } from "@/app/components/common/RegistrationPanel";
 import { ScreenHeader } from "@/app/components/common/ScreenHeader";
+import { WeeklyScheduleGrid } from "@/app/components/common/WeeklyScheduleGrid";
 import type { AppState, MutateAppState } from "@/app/types/nomcurry";
 
 export type ApprovalScreenProps = {
@@ -18,6 +19,7 @@ export function ApprovalScreen({ state, reload, mutate }: ApprovalScreenProps) {
         subtitle="Tất cả đăng ký ca từ nhân viên, nhóm theo tuần."
         action={<ReloadButton reload={reload} />}
       />
+      <WeeklyScheduleGrid state={state} rows={state.registrations} />
       <RegistrationPanel
         title="Danh sách đăng ký"
         description="Lọc theo trạng thái để xem chờ duyệt, đã chốt hoặc từ chối."

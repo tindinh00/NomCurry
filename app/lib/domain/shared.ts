@@ -4,6 +4,8 @@ export const SHEETS = {
   registrations: "DangKyCa",
   payroll: "BangLuong",
   attendance: "ChamCong",
+  makeupAttendance: "ChamCongBu",
+  auditLog: "NhatKyThayDoi",
 } as const;
 
 export const STATUS = {
@@ -16,6 +18,12 @@ export const ATTENDANCE_STATUS = {
   inProgress: "Đang làm",
   completed: "Đã kết ca",
   notCheckedIn: "Chưa điểm danh",
+} as const;
+
+export const MAKEUP_ATTENDANCE_STATUS = {
+  pending: "Chờ duyệt",
+  approved: "Đã duyệt",
+  rejected: "Từ chối",
 } as const;
 
 export function parseDateKey(dateKey: string): Date | null {

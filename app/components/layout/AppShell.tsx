@@ -54,7 +54,7 @@ export function AppShell({ children, state, route, onRoute }: AppShellProps) {
   };
 
   const visibleNav = state?.employee
-    ? NAV_ITEMS.filter((item) => item.managerOnly === state.isManager || (!item.managerOnly && !state.isManager))
+    ? NAV_ITEMS.filter((item) => item.managerOnly === null || item.managerOnly === state.isManager)
     : [];
   const activeMobileIndex = Math.max(0, visibleNav.findIndex((item) => item.key === route));
   const mobileIndicatorStyle = {
@@ -72,8 +72,8 @@ export function AppShell({ children, state, route, onRoute }: AppShellProps) {
               alt="Nom Curry Logo" 
               className="size-10 rounded-lg object-cover" 
             />
-            <span className="flex flex-col items-start leading-tight">
-              <span className="font-semibold">NOM CURRY</span>
+            <span className="notranslate flex flex-col items-start leading-tight" translate="no">
+              <span aria-label="NOM CURRY" className="font-semibold before:content-[attr(data-brand)]" data-brand="NOM CURRY" />
               <span className="text-xs text-muted-foreground">Quản lý ca làm</span>
             </span>
           </Button>

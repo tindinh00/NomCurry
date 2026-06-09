@@ -7,5 +7,5 @@ export {
   resolveSlotRegistration,
   updateRegistrationStatus,
 } from "@/app/lib/domain/registrations";
-export { checkIn, checkOut } from "@/app/lib/domain/attendance";
+export { checkIn, checkOut, requestMakeupAttendance, reviewMakeupAttendance } from "@/app/lib/domain/attendance";
 export { updateHourlyRate } from "@/app/lib/domain/payroll";

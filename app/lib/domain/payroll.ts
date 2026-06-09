@@ -1,6 +1,7 @@
 import type { AppState } from "@/app/types/nomcurry";
 import { appendObjects, normalize, readObjects, timestamp, updateByKey } from "@/app/lib/sheets/helpers";
 import { getInitialData } from "./app-state";
+import { appendAuditLog } from "./audit";
 import { badRequest, forbidden, unauthorized } from "./errors";
 import { SHEETS } from "./shared";
 
@@ -16,17 +17,36 @@ export async function updateHourlyRate(actorEmail: string, employeeId: string, h
   const existingRow = payrollRows.find((r) => r["Mã NV"] === employeeId);
 
   if (existingRow) {
-    await updateByKey(SHEETS.payroll, "Mã NV", employeeId, {
+    const updates = {
       "Lương/Giờ": String(hourlyRate),
       "Cập nhật": timestamp(),
+    };
+    await updateByKey(SHEETS.payroll, "Mã NV", employeeId, updates);
+    await appendAuditLog({
+      actorEmail,
+      action: "UPDATE_HOURLY_RATE",
+      entity: "BangLuong",
+      entityId: employeeId,
+      before: existingRow,
+      after: { ...existingRow, ...updates },
+      note: "Cập nhật lương theo giờ.",
     });
   } else {
-    await appendObjects(SHEETS.payroll, [{
+    const row = {
       "Mã NV": employeeId,
       "Lương/Giờ": String(hourlyRate),
       "Ghi chú": "",
       "Cập nhật": timestamp(),
-    }]);
+    };
+    await appendObjects(SHEETS.payroll, [row]);
+    await appendAuditLog({
+      actorEmail,
+      action: "CREATE_HOURLY_RATE",
+      entity: "BangLuong",
+      entityId: employeeId,
+      after: row,
+      note: "Tạo dòng lương theo giờ.",
+    });
   }
 
   return getInitialData(actorEmail);

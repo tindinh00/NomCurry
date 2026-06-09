@@ -1,4 +1,5 @@
 import { ReloadButton } from "@/app/components/common/Actions";
+import { MakeupAttendanceReviewPanel } from "@/app/components/common/MakeupAttendanceReviewPanel";
 import { RegistrationPanel } from "@/app/components/common/RegistrationPanel";
 import { ScreenHeader } from "@/app/components/common/ScreenHeader";
 import { WeeklyScheduleGrid } from "@/app/components/common/WeeklyScheduleGrid";
@@ -20,6 +21,7 @@ export function ApprovalScreen({ state, reload, mutate }: ApprovalScreenProps) {
         action={<ReloadButton reload={reload} />}
       />
       <WeeklyScheduleGrid state={state} rows={state.registrations} />
+      <MakeupAttendanceReviewPanel state={state} mutate={mutate} />
       <RegistrationPanel
         title="Danh sách đăng ký"
         description="Lọc theo trạng thái để xem chờ duyệt, đã chốt hoặc từ chối."
@@ -31,4 +33,3 @@ export function ApprovalScreen({ state, reload, mutate }: ApprovalScreenProps) {
     </section>
   );
 }
-

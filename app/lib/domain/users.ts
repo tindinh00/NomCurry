@@ -1,6 +1,7 @@
 import type { AppState } from "@/app/types/nomcurry";
 import { appendObjects, generateId, normalize, readObjects } from "@/app/lib/sheets/helpers";
 import { getInitialData } from "./app-state";
+import { appendAuditLog } from "./audit";
 import { SHEETS } from "./shared";
 
 export async function registerUser(actorEmail: string, name: string): Promise<AppState> {
@@ -12,12 +13,21 @@ export async function registerUser(actorEmail: string, name: string): Promise<Ap
   let employeeId = generateId("EMP");
   while (ids.has(employeeId)) employeeId = generateId("EMP");
 
-  await appendObjects(SHEETS.employees, [{
+  const employeeRow = {
     "Mã NV": employeeId,
     "Tên NV": name.trim(),
     "Email": actorEmail,
     "Vai trò": "Nhân viên",
-  }]);
+  };
+  await appendObjects(SHEETS.employees, [employeeRow]);
+  await appendAuditLog({
+    actorEmail,
+    action: "REGISTER_USER",
+    entity: "NhanVien",
+    entityId: employeeId,
+    after: employeeRow,
+    note: "Tạo hồ sơ nhân viên mới.",
+  });
 
   const payrollRows = await readObjects(SHEETS.payroll);
   const hasPay = payrollRows.some((r) => r["Mã NV"] === employeeId);

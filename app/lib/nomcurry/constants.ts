@@ -10,5 +10,10 @@ export const ATTENDANCE_STATUS = {
   completed: "Đã kết ca",
 } as const;
 
-export const PAGE_SIZE = 5;
+export const MAKEUP_ATTENDANCE_STATUS = {
+  pending: "Chờ duyệt",
+  approved: "Đã duyệt",
+  rejected: "Từ chối",
+} as const;
 
+export const PAGE_SIZE = 5;

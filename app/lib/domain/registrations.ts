@@ -9,6 +9,7 @@ import {
   updateByKey,
 } from "@/app/lib/sheets/helpers";
 import { getInitialData } from "./app-state";
+import { appendAuditLog } from "./audit";
 import { badRequest, conflict, forbidden, notFound, unauthorized } from "./errors";
 import { parseDateKey, SHEETS, STATUS } from "./shared";
 
@@ -58,6 +59,14 @@ export async function addWeeklyRegistrations(
       "IsDelete": "FALSE",
     }));
     await appendObjects(SHEETS.registrations, newRows);
+    await appendAuditLog({
+      actorEmail,
+      action: "CREATE_WEEKLY_REGISTRATIONS",
+      entity: "DangKyCa",
+      entityId: employee["Mã NV"],
+      after: newRows,
+      note: `Tạo/cập nhật ${newRows.length} ca đăng ký trong tuần.`,
+    });
   }
 
   return getInitialData(actorEmail);
@@ -87,7 +96,17 @@ export async function updateRegistrationStatus(
     throw conflict("Ca này đã có nhân viên khác được duyệt. Vui lòng từ chối các đăng ký còn lại.");
   }
 
-  await updateByKey(SHEETS.registrations, "Mã Đăng Ký", registrationId, { "Tình Trạng": status });
+  const updates = { "Tình Trạng": status };
+  await updateByKey(SHEETS.registrations, "Mã Đăng Ký", registrationId, updates);
+  await appendAuditLog({
+    actorEmail,
+    action: "UPDATE_REGISTRATION_STATUS",
+    entity: "DangKyCa",
+    entityId: registrationId,
+    before: current,
+    after: { ...current, ...updates },
+    note: `Cập nhật trạng thái đăng ký thành ${status}.`,
+  });
   return getInitialData(actorEmail);
 }
 
@@ -121,6 +140,15 @@ export async function resolveSlotRegistration(actorEmail: string, registrationId
       updateByKey(SHEETS.registrations, "Mã Đăng Ký", row["Mã Đăng Ký"], { "Tình Trạng": STATUS.rejected })
     ),
   ]);
+  await appendAuditLog({
+    actorEmail,
+    action: "RESOLVE_SLOT_REGISTRATION",
+    entity: "DangKyCa",
+    entityId: selected["Mã Đăng Ký"],
+    before: { selected, rejected: sameSlotPending },
+    after: { approved: selected["Mã Đăng Ký"], rejected: sameSlotPending.map((row) => row["Mã Đăng Ký"]) },
+    note: "Chọn một nhân viên cho ca bị trùng.",
+  });
 
   return getInitialData(actorEmail);
 }
@@ -162,6 +190,15 @@ export async function approveWeekPending(actorEmail: string, mondayStr: string):
       updateByKey(SHEETS.registrations, "Mã Đăng Ký", row["Mã Đăng Ký"], { "Tình Trạng": STATUS.approved })
     )
   );
+  await appendAuditLog({
+    actorEmail,
+    action: "APPROVE_WEEK_PENDING",
+    entity: "DangKyCa",
+    entityId: mondayStr,
+    before: approvable,
+    after: approvable.map((row) => ({ ...row, "Tình Trạng": STATUS.approved })),
+    note: `Duyệt ${approvable.length} ca không trùng trong tuần.`,
+  });
 
   return getInitialData(actorEmail);
 }
@@ -181,7 +218,17 @@ export async function deleteRegistration(actorEmail: string, registrationId: str
     if (reg["Tình Trạng"] !== STATUS.pending) throw conflict("Chỉ có thể hủy ca đang ở trạng thái Chờ duyệt.");
   }
 
-  await updateByKey(SHEETS.registrations, "Mã Đăng Ký", registrationId, { "IsDelete": "TRUE" });
+  const updates = { "IsDelete": "TRUE" };
+  await updateByKey(SHEETS.registrations, "Mã Đăng Ký", registrationId, updates);
+  await appendAuditLog({
+    actorEmail,
+    action: "DELETE_REGISTRATION",
+    entity: "DangKyCa",
+    entityId: registrationId,
+    before: reg,
+    after: { ...reg, ...updates },
+    note: "Xóa mềm đăng ký ca.",
+  });
   return getInitialData(actorEmail);
 }
 

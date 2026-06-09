@@ -24,6 +24,24 @@ export type PayrollSummary = {
   totalPay: number;
 };
 
+export type MakeupAttendanceRequest = {
+  requestId: string;
+  registrationId: string;
+  date: string;
+  shiftId: string;
+  employeeId: string;
+  proposedCheckIn: string;
+  proposedCheckOut: string;
+  workedHours: number;
+  reason: string;
+  status: string;
+  requestedBy: string;
+  requestedAt: string;
+  reviewedBy: string;
+  reviewedAt: string;
+  managerNote: string;
+};
+
 export type AppState = {
   email: string;
   employee: SheetRow | null;
@@ -32,6 +50,7 @@ export type AppState = {
   shifts: SheetRow[];
   registrations: SheetRow[];
   attendanceItems: AttendanceItem[];
+  makeupAttendanceRequests: MakeupAttendanceRequest[];
   occupiedSlots: { dateKey: string; shiftId: string }[];
   payrollSummary: PayrollSummary[];
   dashboard: {
@@ -51,4 +70,3 @@ export type MutateAppState = (
   payload: Record<string, unknown>,
   success: string
 ) => Promise<void>;
-

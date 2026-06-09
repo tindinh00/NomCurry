@@ -1,4 +1,4 @@
-import type { AppState } from "@/app/types/nomcurry";
+import type { AppState, MakeupAttendanceRequest } from "@/app/types/nomcurry";
 import { todayKey } from "@/app/lib/nomcurry/date";
 import {
   type SheetRow,
@@ -12,11 +12,12 @@ import {
 import { ATTENDANCE_STATUS, SHEETS, STATUS } from "./shared";
 
 export async function getInitialData(actorEmail: string): Promise<AppState> {
-  const [employees, shifts, registrations, attendanceRows, payrollRates] = await Promise.all([
+  const [employees, shifts, registrations, attendanceRows, makeupAttendanceRows, payrollRates] = await Promise.all([
     readObjects(SHEETS.employees),
     readObjects(SHEETS.shifts),
     readObjects(SHEETS.registrations),
     readObjects(SHEETS.attendance),
+    readObjects(SHEETS.makeupAttendance),
     readObjects(SHEETS.payroll),
   ]);
 
@@ -35,6 +36,7 @@ export async function getInitialData(actorEmail: string): Promise<AppState> {
       allRegistrations: registrations,
       attendanceRows,
       allAttendanceRows: attendanceRows,
+      makeupAttendanceRows,
       payrollRates,
     });
   }
@@ -47,6 +49,9 @@ export async function getInitialData(actorEmail: string): Promise<AppState> {
   const visibleAttendanceRows = isManager
     ? attendanceRows
     : attendanceRows.filter((row) => row["Nhân Viên"] === employee["Mã NV"]);
+  const visibleMakeupAttendanceRows = isManager
+    ? makeupAttendanceRows
+    : makeupAttendanceRows.filter((row) => row["Nhân Viên"] === employee["Mã NV"]);
 
   const visibleEmployees = isManager ? employees : [employee];
 
@@ -60,6 +65,7 @@ export async function getInitialData(actorEmail: string): Promise<AppState> {
     allRegistrations: registrations,
     attendanceRows: visibleAttendanceRows,
     allAttendanceRows: attendanceRows,
+    makeupAttendanceRows: visibleMakeupAttendanceRows,
     payrollRates,
   });
 }
@@ -97,6 +103,26 @@ function buildAttendanceItems(registrations: SheetRow[], attendanceRows: SheetRo
         attendanceNote: att?.["Ghi chú"] ?? "",
       };
     });
+}
+
+function buildMakeupAttendanceRequests(rows: SheetRow[]): MakeupAttendanceRequest[] {
+  return rows.map((row) => ({
+    requestId: row["Mã Yêu Cầu"],
+    registrationId: row["Mã Đăng Ký"],
+    date: row["Ngày"],
+    shiftId: row["Ca Làm"],
+    employeeId: row["Nhân Viên"],
+    proposedCheckIn: row["Giờ vào đề xuất"],
+    proposedCheckOut: row["Giờ ra đề xuất"],
+    workedHours: parseHours(row["Số giờ"]),
+    reason: row["Lý do"],
+    status: row["Trạng thái"],
+    requestedBy: row["Người gửi"],
+    requestedAt: row["Ngày gửi"],
+    reviewedBy: row["Người duyệt"],
+    reviewedAt: row["Ngày duyệt"],
+    managerNote: row["Ghi chú quản lý"],
+  }));
 }
 
 function buildPayrollSummary(employees: SheetRow[], attendanceRows: SheetRow[], payrollRates: SheetRow[]) {
@@ -160,12 +186,14 @@ type BuildAppStateInput = {
   allRegistrations: SheetRow[];
   attendanceRows: SheetRow[];
   allAttendanceRows: SheetRow[];
+  makeupAttendanceRows: SheetRow[];
   payrollRates: SheetRow[];
 };
 
 function buildAppState(input: BuildAppStateInput): AppState {
   const payrollSummary = buildPayrollSummary(input.employees, input.allAttendanceRows, input.payrollRates);
   const attendanceItems = buildAttendanceItems(input.registrations, input.attendanceRows);
+  const makeupAttendanceRequests = buildMakeupAttendanceRequests(input.makeupAttendanceRows);
 
   return {
     email: input.email,
@@ -175,6 +203,7 @@ function buildAppState(input: BuildAppStateInput): AppState {
     shifts: input.shifts,
     registrations: input.registrations,
     attendanceItems,
+    makeupAttendanceRequests,
     occupiedSlots: buildOccupiedSlots(input.allRegistrations),
     payrollSummary,
     dashboard: buildDashboard(input.employees, input.shifts, input.allRegistrations, input.allAttendanceRows, payrollSummary),
